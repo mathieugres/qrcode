@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Météo 72h</title>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 10px;
+        background: #eef3f7;
+    }
+
+    h1 {
+        text-align: center;
+        margin-bottom: 10px;
+    }
+
+    .controls {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    input {
+        flex: 1;
+        padding: 8px;
+        font-size: 1rem;
+    }
+
+    button {
+        padding: 8px 12px;
+        font-size: 1rem;
+        border: none;
+        background: #1976d2;
+        color: white;
+        border-radius: 4px;
+    }
+
+    .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 700px;
+        background: white;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+
+    th {
+        position: sticky;
+        top: 0;
+        background: #1976d2;
+        color: white;
+        padding: 8px;
+    }
+
+    td {
+        padding: 8px;
+        border-bottom: 1px solid #ddd;
+        text-align: center;
+    }
+
+    tr:nth-child(even) td {
+        background: #f6faff;
+    }
+</style>
+</head>
+<body>
+
+<h1>Prévisions météo – 72h</h1>
+
+<div class="controls">
+    <input id="ville" placeholder="Entrez une ville">
+    <button onclick="chercherVille()">Rechercher</button>
+    <button onclick="gps()">📍 GPS</button>
+</div>
+
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>Heure</th>
+                <th>Température</th>
+                <th>Précipitations</th>
+                <th>Vent</th>
+                <th>Rafales</th>
+                <th>Direction</th>
+            </tr>
+        </thead>
+        <tbody id="meteo-table">
+            <tr><td colspan="6">Aucune donnée</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+// Convertit degrés → directions (N, NE, E...)
+function directionVent(angle) {
+    const dirs = ["N","NE","E","SE","S","SO","O","NO"];
+    return dirs[Math.round(angle / 45) % 8];
+}
+
+// ---------------------------
+//   CHARGEMENT MÉTÉO 72h
+// ---------------------------
+async function chargerMeteo(lat, lon) {
+    const table = document.getElementById("meteo-table");
+    table.innerHTML = "<tr><td colspan='6'>Chargement...</td></tr>";
+
+    const url = `https://api.open-meteo.com/v1/forecast`
+        + `?latitude=${lat}`
+        + `&longitude=${lon}`
+        + `&hourly=temperature_2m,precipitation,wind_speed_10m,wind_gusts_10m,wind_direction_10m`
+        + `&forecast_days=3&timezone=auto`;
+
+    try {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        const h   = data.hourly.time;
+        const t   = data.hourly.temperature_2m;
+        const p   = data.hourly.precipitation;
+        const v   = data.hourly.wind_speed_10m;
+        const g   = data.hourly.wind_gusts_10m;
+        const dir = data.hourly.wind_direction_10m;
+
+        table.innerHTML = "";
+
+        for (let i = 0; i < 72; i += 3) {
+            const d = new Date(h[i]);
+            const heure = d.toLocaleString("fr-FR", {
+                weekday: "short",
+                hour: "2-digit",
+                minute: "2-digit"
+            });
+
+            table.insertAdjacentHTML("beforeend",
+                `<tr>
+                    <td>${heure}</td>
+                    <td>${t[i]} °C</td>
+                    <td>${p[i]} mm</td>
+                    <td>${v[i]} km/h</td>
+                    <td>${g[i]} km/h</td>
+                    <td>${directionVent(dir[i])}</td>
+                </tr>`
+            );
+        }
+
+    } catch (err) {
+        table.innerHTML = "<tr><td colspan='6'>Erreur de chargement</td></tr>";
+        console.error(err);
+    }
+}
+
+// ---------------------------
+//  MODE GPS – géolocalisation
+// ---------------------------
+function gps() {
+    if (!navigator.geolocation) {
+        alert("La géolocalisation n'est pas supportée.");
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        pos => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            chargerMeteo(lat, lon);
+        },
+        err => {
+            alert("Impossible d'obtenir la position.");
+        }
+    );
+}
+
+// ---------------------------
+//   RECHERCHE PAR NOM DE VILLE
+// ---------------------------
+async function chercherVille() {
+    const nom = document.getElementById("ville").value.trim();
+    if (!nom) return;
+
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(nom)}&count=1&language=fr&format=json`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (!data.results || data.results.length === 0) {
+        alert("Ville non trouvée.");
+        return;
+    }
+
+    const lat = data.results[0].latitude;
+    const lon = data.results[0].longitude;
+
+    chargerMeteo(lat, lon);
+}
+</script>
+
+</body>
+</html>
