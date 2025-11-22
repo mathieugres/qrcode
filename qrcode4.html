@@ -1,16 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grutier – Prévisions</title>
+
+<style>
+body {
+    margin: 0;
+    background: #111;
+    color: white;
+    font-family: Arial;
+}
+
+/* SECTIONS */
+.section {
+    height: 100vh;
+    scroll-snap-align: start;
+}
+
+/* SCROLL MAGNÉTIQUE */
+#main {
+    height: 100vh;
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+}
+
+/* LOADER */
+#loader {
+    position: fixed;
+    inset: 0;
+    background: #111;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 30px;
+    opacity: 1;
+    transition: opacity .8s;
+}
+.fade-out { opacity: 0; }
+
+/* ÉCRAN ACCUEIL */
+#home {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    height: 100vh;
+}
+
+input {
+    width: 250px;
+    padding: 10px;
+    border-radius: 5px;
+    border: none;
+}
+
+button {
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: none;
+    background: #333;
+    color: white;
+    font-size: 16px;
+}
+
+/* METEO */
+#meteoTitle {
+    text-align: center;
+    font-size: 22px;
+    font-weight: bold;
+    padding: 15px 0;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: center;
+}
+th, td {
+    padding: 8px 0;
+    border-bottom: 1px solid #333;
+}
+
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">Chargement…</div>
+
+<!-- ACCUEIL -->
+<div id="home">
+    <input id="cityInput" placeholder="Entrez une ville…">
+    <button id="btnValider">Valider la ville</button>
+    <button id="btnGPS">GPS</button>
+    <button id="btnGrutier">Grutier confirmé</button>
+</div>
+
+<!-- PAGE PRINCIPALE -->
+<div id="main" style="display:none;">
+
+    <!-- PARTIE METEO -->
+    <div id="meteo" class="section">
+        <div id="meteoTitle">Ville</div>
+        <table id="meteoTable"></table>
+    </div>
+
+    <!-- PARTIE FICHE -->
+    <div id="fiche" class="section" style="padding:20px;">
+        <h2>Fiche Grutier</h2>
+        <p>Mathieu Grès – 09/10/89</p>
+        <p>Expérience : 5 ans</p>
+        <p>Chantiers : Dumez, Arbonis, Verdoïa, Angevin, Maître Cube, Constantini</p>
+        <p>Taux horaire :<br>
+            • Sol (télécommande) : 21€/h (25€/h déc–mars)<br>
+            • Cabine : 19€/h
+        </p>
+        <a href="tel:0650980791">
+            <button>Appeler</button>
+        </a>
+    </div>
+
+</div>
+
+
+<!-- SCRIPT METEO -->
 <script>
 
 /* --------------------------------------- */
-/* API METEO : OPEN-METEO (sans clé)       */
+/* API METEO : OPEN-METEO                  */
 /* --------------------------------------- */
 
 async function loadWeather(city) {
-
     document.getElementById("home").style.display = "none";
     document.getElementById("main").style.display = "block";
     document.getElementById("meteoTitle").innerText = city;
 
-    // GEO API
     const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=fr&format=json`;
     const geo = await fetch(geoUrl).then(r => r.json());
 
@@ -20,13 +148,10 @@ async function loadWeather(city) {
     }
 
     const { latitude, longitude } = geo.results[0];
-
     loadWeatherByCoords(latitude, longitude, city);
 }
 
-
-async function loadWeatherByCoords(lat, lon, label = "Ma position") {
-
+async function loadWeatherByCoords(lat, lon, label="Ma position") {
     document.getElementById("home").style.display = "none";
     document.getElementById("main").style.display = "block";
     document.getElementById("meteoTitle").innerText = label;
@@ -35,15 +160,12 @@ async function loadWeatherByCoords(lat, lon, label = "Ma position") {
         https://api.open-meteo.com/v1/forecast?
         latitude=${lat}&longitude=${lon}
         &hourly=temperature_2m,precipitation,wind_speed_10m,wind_gusts_10m,wind_direction_10m
-        &daily=sunrise,sunset
         &timezone=auto
     `.replace(/\s+/g, '');
 
     const data = await fetch(url).then(r => r.json());
-
     buildWeatherTable(data);
 }
-
 
 /* --------------------------------------- */
 /* TABLEAU METEO                           */
@@ -66,10 +188,9 @@ function buildWeatherTable(data) {
     const rowHeight = 45;
     const maxRows = Math.floor(usableHeight / rowHeight);
 
-    const slots = build4hSlots(data);
-    const rows = slots.slice(0, maxRows);
+    const slots = build4hSlots(data).slice(0, maxRows);
 
-    rows.forEach(r => {
+    slots.forEach(r => {
         const tr = document.createElement("tr");
 
         tr.innerHTML = `
@@ -80,105 +201,10 @@ function buildWeatherTable(data) {
             <td>${r.wind_gust} km/h</td>
         `;
 
-        // gradient
-        const intens = Math.min(r.wind_gust, 72) / 72;
-        tr.children[4].style.background =
-            `rgb(${255 - 255*intens}, ${255 - 255*intens}, ${255 - 255*intens})`;
-        tr.children[4].style.color = intens > 0.5 ? "white" : "black";
-
         table.appendChild(tr);
     });
 }
 
-
 /* --------------------------------------- */
-/* Construire les tranches de 4 heures     */
-/* --------------------------------------- */
-
-function build4hSlots(data) {
-
-    const tranches = [0, 4, 8, 12, 16, 20];
-
-    const hours = data.hourly.time;
-    const temp = data.hourly.temperature_2m;
-    const rain = data.hourly.precipitation;
-    const wind = data.hourly.wind_speed_10m;
-    const gust = data.hourly.wind_gusts_10m;
-    const dir = data.hourly.wind_direction_10m;
-
-    const now = new Date();
-    const currentHour = now.getHours();
-    const startTranche = tranches.reduce((acc, h) => currentHour >= h ? h : acc, 0);
-
-    const slots = [];
-
-    for (let h = 0; h < hours.length; h++) {
-
-        const date = new Date(hours[h]);
-        const hour = date.getHours();
-
-        const tranche = tranches.reduce((acc, t) => hour >= t ? t : acc, 0);
-
-        if (slots.length === 0 && tranche < startTranche) continue;
-        if (slots.some(s => s.hour === formatHour(tranche))) continue;
-
-        slots.push({
-            hour: formatHour(tranche),
-            temp: temp[h],
-            rain: rain[h],
-            wind_speed: Math.round(wind[h]),
-            wind_gust: Math.round(gust[h]),
-            wind_dir: degToArrow(dir[h])
-        });
-
-        if (slots.length >= 12) break;
-    }
-
-    return slots;
-}
-
-/* --------------------------------------- */
-/* Outils                                   */
-/* --------------------------------------- */
-
-function formatHour(h) {
-    return (h < 10 ? "0" : "") + h + "h";
-}
-
-function degToArrow(deg) {
-    if (typeof deg !== "number" || isNaN(deg)) return "•";
-    const dirs = ["↑","↗","→","↘","↓","↙","←","↖"];
-    return dirs[Math.round(deg / 45) % 8];
-}
-
-
-/* --------------------------------------- */
-/* Loader + Boutons                         */
-/* --------------------------------------- */
-
-setTimeout(() => {
-    document.getElementById('loader').classList.add("fade-out");
-    setTimeout(() => {
-        document.getElementById('loader').style.display = "none";
-        document.getElementById('home').style.display = "flex";
-    }, 800);
-}, 2600);
-
-document.getElementById("btnValider").onclick = () => {
-    const city = document.getElementById("cityInput").value.trim();
-    if (!city) return alert("Entre une ville.");
-    loadWeather(city);
-};
-
-document.getElementById("btnGPS").onclick = () => {
-    navigator.geolocation.getCurrentPosition(pos => {
-        loadWeatherByCoords(pos.coords.latitude, pos.coords.longitude);
-    });
-};
-
-document.getElementById("btnGrutier").onclick = () => {
-    loadWeather("Paris");
-    document.getElementById("main").scrollTo(0, window.innerHeight);
-};
-
-</script>
+/* CALCUL DES TRANCHES                     */
+/* --------------------*
