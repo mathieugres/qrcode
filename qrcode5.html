@@ -140,15 +140,20 @@ button {
 }
 
 .section {
-    height: 100vh;
     width: 100%;
     scroll-snap-align: center;
 }
 
+/* Section météo = EXACTEMENT 100vh */
+#meteo.section {
+    height: 100vh;
+}
+
+/* TABLEAU METEO : ajusté pour 12 lignes + header */
 #meteoTitle {
     text-align: center;
-    padding: 15px;
-    font-size: 24px;
+    padding: 12px;
+    font-size: 22px;
     font-weight: bold;
 }
 
@@ -158,18 +163,25 @@ button {
     border-collapse: collapse;
 }
 
+/* Hauteur fixe + police réduite pour faire tenir 12 lignes */
+#meteoTable th, #meteoTable td {
+    padding: 4px 0;
+    font-size: 16px;
+    height: 32px;
+}
+
 #meteoTable tr {
     border-bottom: 1px solid #333;
 }
 
-#meteoTable th, #meteoTable td {
-    padding: 10px;
-    font-size: 18px;
+/* FICHE GRUTIER */
+#fiche.section {
+    height: 100vh;
+    padding: 20px;
 }
 
-/* FICHE GRUTIER */
-#fiche {
-    padding: 20px;
+#fiche h2 {
+    margin-top: 0;
 }
 
 #fiche button {
@@ -182,7 +194,10 @@ button {
 </head>
 <body>
 
-<!-- LOADER -->
+<!-- ------------------------------ -->
+<!--           LOADER               -->
+<!-- ------------------------------ -->
+
 <div id="loader">
     <div class="crane">
         <div class="hook-line"></div>
@@ -191,7 +206,10 @@ button {
     <div class="loader-text">Chargement…</div>
 </div>
 
-<!-- HOME -->
+<!-- ------------------------------ -->
+<!--         ÉCRAN ACCUEIL          -->
+<!-- ------------------------------ -->
+
 <div id="home">
     <input id="cityInput" placeholder="Entrez une ville…">
     <button id="btnValider">Valider la ville</button>
@@ -199,16 +217,19 @@ button {
     <button id="btnGrutier">Grutier confirmé</button>
 </div>
 
-<!-- MAIN -->
+<!-- ------------------------------ -->
+<!--        PAGE PRINCIPALE         -->
+<!-- ------------------------------ -->
+
 <div id="main">
-    
-    <!-- METEO -->
+
+    <!-- PARTIE METEO -->
     <div id="meteo" class="section">
         <div id="meteoTitle">Ville</div>
         <table id="meteoTable"></table>
     </div>
 
-    <!-- FICHE -->
+    <!-- PARTIE FICHE -->
     <div id="fiche" class="section">
         <h2>Fiche Grutier</h2>
         <p><b>Mathieu Grès</b> – 09/10/89</p>
@@ -223,6 +244,10 @@ button {
     </div>
 
 </div>
+
+<!-- ------------------------------ -->
+<!--        SCRIPT COMPLET          -->
+<!-- ------------------------------ -->
 
 <script>
 
@@ -240,7 +265,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 2200);
 });
 
-/* ------------ API METEO ------------ */
+
+/* API METEO : OPEN-METEO (sans clé) */
 
 async function loadWeather(city) {
 
@@ -248,16 +274,18 @@ async function loadWeather(city) {
     document.getElementById("main").style.display = "block";
     document.getElementById("meteoTitle").innerText = city;
 
-    const geoUrl =
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=fr&format=json`;
-    
+    const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=fr&format=json`;
     const geo = await fetch(geoUrl).then(r => r.json());
-    if (!geo.results || !geo.results.length) return alert("Ville introuvable");
+
+    if (!geo.results || !geo.results.length) {
+        alert("Ville introuvable");
+        return;
+    }
 
     const { latitude, longitude } = geo.results[0];
-
     loadWeatherByCoords(latitude, longitude, city);
 }
+
 
 async function loadWeatherByCoords(lat, lon, label = "Ma position") {
 
@@ -277,7 +305,8 @@ async function loadWeatherByCoords(lat, lon, label = "Ma position") {
     buildWeatherTable(data);
 }
 
-/* ------------ TABLE METEO (12 lignes fixes) ------------ */
+
+/* TABLE METEO */
 
 function buildWeatherTable(data) {
 
@@ -292,11 +321,12 @@ function buildWeatherTable(data) {
         </tr>
     `;
 
+    const maxRows = 12; // toujours 12 lignes
+
     const slots = build4hSlots(data);
-    const rows = slots.slice(0, 12);  // ← FIXÉ À 12 LIGNES
+    const rows = slots.slice(0, maxRows);
 
     rows.forEach(r => {
-
         const tr = document.createElement("tr");
 
         tr.innerHTML = `
@@ -316,7 +346,8 @@ function buildWeatherTable(data) {
     });
 }
 
-/* Calcul tranches 4h */
+
+/* TRANCHES 4H */
 
 function build4hSlots(data) {
 
