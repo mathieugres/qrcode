@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Météo Grutier</title>
+
+<style>
+
+/* RESET */
+body {
+    margin: 0;
+    background: #111;
+    color: white;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+}
+
+/* -------------------------------- */
+/*            LOADER GRUE           */
+/* -------------------------------- */
+
+#loader {
+    position: fixed;
+    inset: 0;
+    background: #111;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    color: white;
+    opacity: 1;
+    transition: opacity 0.8s;
+}
+
+#loader.fade-out {
+    opacity: 0;
+}
+
+/* Structure de la grue */
+.crane {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Câble */
+.hook-line {
+    width: 4px;
+    height: 120px;
+    background: linear-gradient(to bottom, #999, #555);
+    animation: line-move 1.6s ease-in-out infinite;
+}
+
+/* Moufle */
+.hook {
+    width: 40px;
+    height: 45px;
+    background: #f7c200;
+    border: 4px solid #000;
+    border-radius: 4px;
+    position: relative;
+    animation: hook-swing 1.6s ease-in-out infinite;
+}
+
+/* Liserés noir/jaune */
+.hook::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        45deg,
+        #000 0 8px,
+        #f7c200 8px 16px
+    );
+    opacity: 0.3;
+}
+
+.loader-text {
+    margin-top: 20px;
+    font-size: 20px;
+    font-weight: bold;
+    animation: blink 1.4s infinite;
+}
+
+/* Animations */
+@keyframes hook-swing {
+    0% { transform: translateX(-6px); }
+    50% { transform: translateX(6px); }
+    100% { transform: translateX(-6px); }
+}
+@keyframes line-move {
+    0% { height: 110px; }
+    50% { height: 125px; }
+    100% { height: 110px; }
+}
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+}
+
+/* -------------------------------- */
+/*        ÉCRAN D’ACCUEIL           */
+/* -------------------------------- */
+
+#home {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    gap: 15px;
+    padding: 20px;
+    text-align: center;
+}
+
+#cityInput {
+    padding: 12px;
+    font-size: 18px;
+    width: 80%;
+    border-radius: 8px;
+    border: none;
+}
+
+button {
+    padding: 12px 20px;
+    font-size: 18px;
+    background: #f7c200;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+/* -------------------------------- */
+/*         PAGE PRINCIPALE          */
+/* -------------------------------- */
+
+#main {
+    display: none;
+    height: 100vh;
+    width: 100vw;
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+}
+
+.section {
+    height: 100vh;
+    width: 100%;
+    scroll-snap-align: center;
+}
+
+/* METEO */
+#meteoTitle {
+    text-align: center;
+    padding: 15px;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+#meteoTable {
+    width: 100%;
+    text-align: center;
+    border-collapse: collapse;
+}
+
+#meteoTable tr {
+    border-bottom: 1px solid #333;
+}
+
+#meteoTable th, #meteoTable td {
+    padding: 10px;
+    font-size: 18px;
+}
+
+/* FICHE GRUTIER */
+#fiche {
+    padding: 20px;
+}
+
+#fiche h2 {
+    margin-top: 0;
+}
+
+#fiche button {
+    width: 100%;
+    margin-top: 20px;
+    background: #28a745;
+}
+
+</style>
+</head>
+<body>
+
+<!-- ------------------------------ -->
+<!--           LOADER               -->
+<!-- ------------------------------ -->
+
+<div id="loader">
+    <div class="crane">
+        <div class="hook-line"></div>
+        <div class="hook"></div>
+    </div>
+    <div class="loader-text">Chargement…</div>
+</div>
+
+<!-- ------------------------------ -->
+<!--         ÉCRAN ACCUEIL          -->
+<!-- ------------------------------ -->
+
+<div id="home">
+    <input id="cityInput" placeholder="Entrez une ville…">
+    <button id="btnValider">Valider la ville</button>
+    <button id="btnGPS">GPS</button>
+    <button id="btnGrutier">Grutier confirmé</button>
+</div>
+
+<!-- ------------------------------ -->
+<!--        PAGE PRINCIPALE         -->
+<!-- ------------------------------ -->
+
+<div id="main">
+
+    <!-- PARTIE METEO -->
+    <div id="meteo" class="section">
+        <div id="meteoTitle">Ville</div>
+        <table id="meteoTable"></table>
+    </div>
+
+    <!-- PARTIE FICHE -->
+    <div id="fiche" class="section">
+        <h2>Fiche Grutier</h2>
+        <p><b>Mathieu Grès</b> – 09/10/89</p>
+        <p><b>Expérience :</b> 5 ans</p>
+        <p><b>Chantiers :</b> Dumez, Arbonis, Verdoïa, Angevin, Maître Cube, Constantini</p>
+        <p><b>Taux horaire :</b><br>
+            • Sol (télécommande) : 21€/h (25€/h décembre–mars)<br>
+            • Cabine : 19€/h
+        </p>
+
+        <a href="tel:0650980791"><button>Appeler</button></a>
+    </div>
+
+</div>
+
+<!-- ------------------------------ -->
+<!--        SCRIPT COMPLET          -->
+<!-- ------------------------------ -->
+
+<script>
+
+/* ------------------------------- */
+/* Loader → écran d'accueil        */
+/* ------------------------------- */
+
+document.addEventListener("DOMContentLoaded", () => {
+    setTimeout(() => {
+        const loader = document.getElementById('loader');
+        loader.classList.add("fade-out");
+
+        setTimeout(() => {
+            loader.style.display = "none";
+            document.getElementById('home').style.display = "flex";
+        }, 800);
+
+    }, 2200);
+});
+
+
+/* --------------------------------------- */
+/* API METEO : OPEN-METEO (sans clé)       */
+/* --------------------------------------- */
+
+async function loadWeather(city) {
+
+    document.getElementById("home").style.display = "none";
+    document.getElementById("main").style.display = "block";
+    document.getElementById("meteoTitle").innerText = city;
+
+    const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=fr&format=json`;
+    const geo = await fetch(geoUrl).then(r => r.json());
+
+    if (!geo.results || !geo.results.length) {
+        alert("Ville introuvable");
+        return;
+    }
+
+    const { latitude, longitude } = geo.results[0];
+    loadWeatherByCoords(latitude, longitude, city);
+}
+
+
+async function loadWeatherByCoords(lat, lon, label = "Ma position") {
+
+    document.getElementById("home").style.display = "none";
+    document.getElementById("main").style.display = "block";
+    document.getElementById("meteoTitle").innerText = label;
+
+    const url = `
+        https://api.open-meteo.com/v1/forecast?
+        latitude=${lat}&longitude=${lon}
+        &hourly=temperature_2m,precipitation,wind_speed_10m,wind_gusts_10m,wind_direction_10m
+        &daily=sunrise,sunset
+        &timezone=auto
+    `.replace(/\s+/g, '');
+
+    const data = await fetch(url).then(r => r.json());
+    buildWeatherTable(data);
+}
+
+
+/* ---------------- TABLE METEO --------------- */
+
+function buildWeatherTable(data) {
+
+    const table = document.getElementById("meteoTable");
+    table.innerHTML = `
+        <tr>
+            <th>Heure</th>
+            <th>T°</th>
+            <th>Pluie</th>
+            <th>Vent</th>
+            <th>Rafales</th>
+        </tr>
+    `;
+
+    const usableHeight = document.getElementById("meteo").offsetHeight - 60;
+    const rowHeight = 45;
+    const maxRows = Math.floor(usableHeight / rowHeight);
+
+    const slots = build4hSlots(data);
+    const rows = slots.slice(0, maxRows);
+
+    rows.forEach(r => {
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+            <td>${r.hour}</td>
+            <td>${Math.round(r.temp)}°</td>
+            <td>${r.rain.toFixed(1)} mm</td>
+            <td>${r.wind_dir} ${r.wind_speed} km/h</td>
+            <td>${r.wind_gust} km/h</td>
+        `;
+
+        const intens = Math.min(r.wind_gust, 72) / 72;
+        tr.children[4].style.background =
+            `rgb(${255 - 255*intens}, ${255 - 255*intens}, ${255 - 255*intens})`;
+        tr.children[4].style.color = intens > 0.5 ? "white" : "black";
+
+        table.appendChild(tr);
+    });
+}
+
+
+/* ----------- CALCUL DES TRANCHES ----------- */
+
+function build4hSlots(data) {
+
+    const tranches = [0, 4, 8, 12, 16, 20];
+
+    const hours = data.hourly.time;
+    const temp = data.hourly.temperature_2m;
+    const rain = data.hourly.precipitation;
+    const wind = data.hourly.wind_speed_10m;
+    const gust = data.hourly.wind_gusts_10m;
+    const dir = data.hourly.wind_direction_10m;
+
+    const now = new Date();
+    const currentHour = now.getHours();
+    const startTranche = tranches.reduce((acc, h) => currentHour >= h ? h : acc, 0);
+
+    const slots = [];
+
+    for (let h = 0; h < hours.length; h++) {
+
+        const date = new Date(hours[h]);
+        const hour = date.getHours();
+
+        const tranche = tranches.reduce((acc, t) => hour >= t ? t : acc, 0);
+
+        if (slots.length === 0 && tranche < startTranche) continue;
+        if (slots.some(s => s.hour === formatHour(tranche))) continue;
+
+        slots.push({
+            hour: formatHour(tranche),
+            temp: temp[h],
+            rain: rain[h],
+            wind_speed: Math.round(wind[h]),
+            wind_gust: Math.round(gust[h]),
+            wind_dir: degToArrow(dir[h])
+        });
+
+        if (slots.length >= 12) break;
+    }
+
+    return slots;
+}
+
+
+/* --------------- OUTILS ---------------- */
+
+function formatHour(h) {
+    return (h < 10 ? "0" : "") + h + "h";
+}
+
+function degToArrow(deg) {
+    if (typeof deg !== "number" || isNaN(deg)) return "•";
+    const dirs = ["↑","↗","→","↘","↓","↙","←","↖"];
+    return dirs[Math.round(deg / 45) % 8];
+}
+
+
+/* ------------- ÉCOUTE DES BOUTONS -------------- */
+
+document.getElementById("btnValider").onclick = () => {
+    const city = document.getElementById("cityInput").value.trim();
+    if (!city) return alert("Entre une ville.");
+    loadWeather(city);
+};
+
+document.getElementById("btnGPS").onclick = () => {
+    navigator.geolocation.getCurrentPosition(pos => {
+        loadWeatherByCoords(pos.coords.latitude, pos.coords.longitude);
+    });
+};
+
+document.getElementById("btnGrutier").onclick = () => {
+    loadWeather("Paris");
+    document.getElementById("main").scrollTo(0, window.innerHeight);
+};
+
+</script>
+
+</body>
+</html>
