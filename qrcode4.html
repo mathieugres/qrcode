@@ -4,15 +4,13 @@
 /* API METEO : OPEN-METEO (sans clé)       */
 /* --------------------------------------- */
 
-
-// Charger météo à partir du nom de la ville
 async function loadWeather(city) {
 
     document.getElementById("home").style.display = "none";
     document.getElementById("main").style.display = "block";
     document.getElementById("meteoTitle").innerText = city;
 
-    // 1) géolocalisation du nom de la ville (OpenMeteo Geocoding)
+    // GEO API
     const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=fr&format=json`;
     const geo = await fetch(geoUrl).then(r => r.json());
 
@@ -27,7 +25,6 @@ async function loadWeather(city) {
 }
 
 
-// Charger météo via GPS
 async function loadWeatherByCoords(lat, lon, label = "Ma position") {
 
     document.getElementById("home").style.display = "none";
@@ -37,18 +34,19 @@ async function loadWeatherByCoords(lat, lon, label = "Ma position") {
     const url = `
         https://api.open-meteo.com/v1/forecast?
         latitude=${lat}&longitude=${lon}
-        &hourly=temperature_2m,precipitation,wind_speed_10m,wind_gusts_10m
+        &hourly=temperature_2m,precipitation,wind_speed_10m,wind_gusts_10m,wind_direction_10m
         &daily=sunrise,sunset
         &timezone=auto
     `.replace(/\s+/g, '');
 
     const data = await fetch(url).then(r => r.json());
+
     buildWeatherTable(data);
 }
 
 
 /* --------------------------------------- */
-/* CONSTRUCTION DU TABLEAU METEO           */
+/* TABLEAU METEO                           */
 /* --------------------------------------- */
 
 function buildWeatherTable(data) {
@@ -64,7 +62,6 @@ function buildWeatherTable(data) {
         </tr>
     `;
 
-    // Nombre de lignes visibles dans l’écran
     const usableHeight = document.getElementById("meteo").offsetHeight - 60;
     const rowHeight = 45;
     const maxRows = Math.floor(usableHeight / rowHeight);
@@ -79,11 +76,11 @@ function buildWeatherTable(data) {
             <td>${r.hour}</td>
             <td>${Math.round(r.temp)}°</td>
             <td>${r.rain.toFixed(1)} mm</td>
-            <td>${r.wind_dir} ${r.wind_speed}</td>
-            <td>${r.wind_gust}</td>
+            <td>${r.wind_dir} ${r.wind_speed} km/h</td>
+            <td>${r.wind_gust} km/h</td>
         `;
 
-        // Rafales : gradient noir/blanc
+        // gradient
         const intens = Math.min(r.wind_gust, 72) / 72;
         tr.children[4].style.background =
             `rgb(${255 - 255*intens}, ${255 - 255*intens}, ${255 - 255*intens})`;
@@ -95,7 +92,7 @@ function buildWeatherTable(data) {
 
 
 /* --------------------------------------- */
-/* TRANSFORMATION : DONNÉES → TRANCHES 4H  */
+/* Construire les tranches de 4 heures     */
 /* --------------------------------------- */
 
 function build4hSlots(data) {
@@ -107,47 +104,81 @@ function build4hSlots(data) {
     const rain = data.hourly.precipitation;
     const wind = data.hourly.wind_speed_10m;
     const gust = data.hourly.wind_gusts_10m;
+    const dir = data.hourly.wind_direction_10m;
 
-    // tranche actuelle
     const now = new Date();
     const currentHour = now.getHours();
-
     const startTranche = tranches.reduce((acc, h) => currentHour >= h ? h : acc, 0);
 
     const slots = [];
 
     for (let h = 0; h < hours.length; h++) {
 
-        const d = new Date(hours[h]);
-        const hour = d.getHours();
+        const date = new Date(hours[h]);
+        const hour = date.getHours();
 
-        // trouver tranche de 4h
-        const tranche = tranches.reduce((acc, th) => hour >= th ? th : acc, 0);
+        const tranche = tranches.reduce((acc, t) => hour >= t ? t : acc, 0);
 
         if (slots.length === 0 && tranche < startTranche) continue;
-
-        // éviter doublons de tranche
         if (slots.some(s => s.hour === formatHour(tranche))) continue;
 
         slots.push({
             hour: formatHour(tranche),
             temp: temp[h],
             rain: rain[h],
-            wind_speed: Math.round(wind[h]) + " km/h",
-            wind_dir: degToArrow(0), // Open-Meteo donne pas la direction → neutre si tu veux
-            wind_gust: Math.round(gust[h])
+            wind_speed: Math.round(wind[h]),
+            wind_gust: Math.round(gust[h]),
+            wind_dir: degToArrow(dir[h])
         });
 
-        if (slots.length >= 12) break; // sécurité
+        if (slots.length >= 12) break;
     }
 
     return slots;
 }
 
+/* --------------------------------------- */
+/* Outils                                   */
+/* --------------------------------------- */
+
+function formatHour(h) {
+    return (h < 10 ? "0" : "") + h + "h";
+}
+
+function degToArrow(deg) {
+    if (typeof deg !== "number" || isNaN(deg)) return "•";
+    const dirs = ["↑","↗","→","↘","↓","↙","←","↖"];
+    return dirs[Math.round(deg / 45) % 8];
+}
 
 
 /* --------------------------------------- */
-/* OUTILS                                  */
+/* Loader + Boutons                         */
 /* --------------------------------------- */
 
-functio
+setTimeout(() => {
+    document.getElementById('loader').classList.add("fade-out");
+    setTimeout(() => {
+        document.getElementById('loader').style.display = "none";
+        document.getElementById('home').style.display = "flex";
+    }, 800);
+}, 2600);
+
+document.getElementById("btnValider").onclick = () => {
+    const city = document.getElementById("cityInput").value.trim();
+    if (!city) return alert("Entre une ville.");
+    loadWeather(city);
+};
+
+document.getElementById("btnGPS").onclick = () => {
+    navigator.geolocation.getCurrentPosition(pos => {
+        loadWeatherByCoords(pos.coords.latitude, pos.coords.longitude);
+    });
+};
+
+document.getElementById("btnGrutier").onclick = () => {
+    loadWeather("Paris");
+    document.getElementById("main").scrollTo(0, window.innerHeight);
+};
+
+</script>
